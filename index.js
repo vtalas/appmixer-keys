@@ -1,72 +1,145 @@
 const { program } = require('commander');
-const path = require('path');
+const localKeys = require('./service-keys');
+const chalk = require('chalk');
 
-const AUTH_HUB_API_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6ImFkbWluIiwiaWF0IjoxNzA0NzkzNzE3fQ.TQgZxkxrSK5uCTeBdHcX6WeQ8UpP-7J20Vu8Fzh5RN0';
-const AUTH_HUB_URL = 'https://auth-hub.qa.appmixer.com';
+require('dotenv-flow').config();
 
-const { getConfig, x } = require('./config')({ token: AUTH_HUB_API_TOKEN, authHubUrl: AUTH_HUB_URL });
-const { getConnectorFolders, getServices } = require('./utils');
+const AUTH_HUB_API_TOKEN = process.env.AUTH_HUB_API_TOKEN;
+const AUTH_HUB_URL = process.env.AUTH_HUB_URL;
+const APPMIXER_API_TOKEN = process.env.APPMIXER_API_TOKEN;
+const APPMIXER_API_URL = process.env.APPMIXER_API_URL;
+const CURRENT_ENV = process.env.ENV_NAME;
+
+const authHubApi = require('./appmixer-api')({ token: AUTH_HUB_API_TOKEN, url: AUTH_HUB_URL });
+const appmixerApi = require('./appmixer-api')({ token: APPMIXER_API_TOKEN, url: APPMIXER_API_URL });
+
+const localSources = require('./local-sources');
+const KEYS_BASE_PATH = './connectors';
+const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
+const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
+
+const listConfigurations = async function* (services, env) {
+    for (let serviceId of services) {
+
+        const { data } = await appmixerApi.getServiceConfig(serviceId);
+        yield { serviceId, data };
+    }
+};
+
+const dump = async function(serviceId, options) {
+
+    const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
+    if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+        throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+    }
+
+    const json = await localKeys.get(serviceId, opt);
+
+    console.log(chalk.yellow(serviceId));
+    console.log(chalk.yellow('ENV'), CURRENT_ENV);
+    console.log(chalk.yellow('Local Keys'), localKeys.src(serviceId, opt));
+    console.log(json);
+
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
+    console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
+
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
+    console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
+
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
+};
 
 program
-    .command('list-services <path>')
-    .description('TBD')
-    .action(async (xxx, options) => {
+    .command('list' )
+    .option('-b, --store-backoffice', 'store configurations to local keys.')
+    .description('list all service configurations and renders the results in the table.')
+    .action(async (options) => {
 
-        const connectors = await getConnectorFolders(xxx);
+        const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
 
-        const res = {};
-        for (let connector of connectors) {
+        const localServices = await localSources.list(SRC_PATH);
+        const stats = [];
 
-            const services = await getServices(connector);
+        for (let { connectorPath, serviceIds } of localServices) {
 
-            const serviceName = path.basename(connector);
-            const vendor = path.basename(path.dirname(connector));
+            for (let service of serviceIds) {
+                const { isOauth } = await localSources.getAuth(service, SRC_PATH);
+                const { data } = await authHubApi.getServiceConfig(service, opt);
+                const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
+                const isEmpty = !data || Object.keys(data).length === 0;
+                const isBackofficeEmpty = !backoffice || backoffice && Object.keys(backoffice).length === 0;
 
-            res[vendor] = res[vendor] || {};
-            res[vendor][serviceName] = services;
+                if (options.storeBackoffice) {
+                    await localKeys.update(service, data, opt);
+                }
 
+                stats.push({
+                    service,
+                    OAuth: isOauth ? 'X' : ' ',
+                    'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 40) + '...' : 'n/a',
+                    'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
+                });
+            }
         }
-        console.log(res);
+
+        console.table(stats);
+        console.log(chalk.greenBright('ENV'), CURRENT_ENV);
     });
 
-// program
-//     .option('-d, --debug', 'output extra debugsging')
-//     .option('-s, --service <service>', 'appmixer:hubspot')
-//     .command('xxx <path>')
-//     .on('--help', () => {
-//         console.log('');
-//         console.log('Example call:');
-//         console.log('  $ custom-help --small --pizza-type "spicy"');
-//     })
-//         .action(async function({
-//                                    listServices,
-//                                small,
-//                                pizzaType
-//                            }) {
-//
-//         const options = program.opts();
-//
-//         console.log(arguments);
-//         // const { data } = await getConfig(service);
-//
-//         const data = await x('./connectors', function(dirent, res) {
-//
-//             if (dirent.isFile && dirent.name === 'config.js') {
-//                 return res;
-//             }
-//         });
-//
-//         console.log(options);
-//
-//         switch (options) {
-//             case 'l':
-//                 console.log('appmixer:hubspot');
-//                 break;
-//             default:
-//                 console.log('Unknown service');
-//         }
-//
-//         console.log(data);
-//     });
+program
+    .command('set-authub <service>')
+    .option('-d, --delete', 'delete backoffice configuration')
+    .description('Set the configuration of a service in Auth Hub.')
+    .action(async (serviceId, options) => {
+
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        }
+
+        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+
+        // set config
+        await authHubApi.setServiceConfig(serviceId, json);
+
+        // upload zip
+        await authHubApi.upload(serviceId);
+
+        if (options.delete) {
+            console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
+            await appmixerApi.deleteServiceConfig(serviceId);
+        }
+
+        console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
+
+        await dump(serviceId);
+    });
+
+program
+    .command('set-backoffice <service>')
+    .action(async (serviceId, options) => {
+
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        }
+
+        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+
+        // set config
+        await appmixerApi.setServiceConfig(serviceId, json);
+
+        console.log(chalk.bgGreen(`Service ${serviceId} updated in Backoffice`));
+
+        await dump(serviceId);
+    });
+
+program
+    .command('dump <service>')
+    .action(dump);
 
 program.parse(process.argv);
+
+
+

@@ -2,7 +2,7 @@ const axios = require('axios');
 const { resolve } = require('path');
 const { readdir } = require('fs').promises;
 const fs = require('fs/promises');
-const path = require('path');
+const chalk = require('chalk');
 
 async function getFilesFiltered(dir, filter) {
     const dirents = await readdir(dir, { withFileTypes: true });
@@ -19,17 +19,7 @@ async function getFilesFiltered(dir, filter) {
     return Array.prototype.concat(...files);
 }
 
-async function getConnectorFolders(path) {
-
-    return getFilesFiltered(path, function(dirent, res, directory) {
-
-        if (dirent.isFile && dirent.name === 'service.json') {
-            return directory;
-        }
-    });
-}
-
-async function getServices(connectorPath) {
+async function getAuthServicesForConnector(connectorPath) {
 
     const components = await getFilesFiltered(connectorPath, function(dirent, res, directory) {
 
@@ -38,38 +28,38 @@ async function getServices(connectorPath) {
         }
     });
 
-    const services = {};
+    const authServicesMap = {};
     for (let item of components) {
 
         const { file, folder } = item;
 
-         // (path.basename(connectorPath) === path.basename(folder)) ? services.root = file : services[path.basename(folder)] = file;
-
-
         const json = JSON.parse(await fs.readFile(file, { encoding: 'utf8' }));
 
         if (json?.auth?.service) {
-            services[json?.auth?.service] = file;
+            authServicesMap[json?.auth?.service] = file;
         }
     }
 
-    return Object.keys(services);
-    // return services;
+    return Object.keys(authServicesMap);
 }
 
 const rq = async function({
                               url,
                               method = 'get',
                               data = {},
+                              headers = {},
                               token
                           }) {
 
+
+    console.log(chalk.gray(method.toUpperCase(), url));
     return axios({
         url,
         method,
-        data: { ...data },
+        data,
         headers: {
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            ...headers
         }
     }).then(response => {
         return response;
@@ -82,5 +72,5 @@ const rq = async function({
 
 module.exports = {
     rq, getFilesFiltered,
-    getConnectorFolders, getServices
+    getAuthServicesForConnector
 };

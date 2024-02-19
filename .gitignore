@@ -1,0 +1,4 @@
+/node_modules/
+.env.stg
+.env.prod
+.env.qa
