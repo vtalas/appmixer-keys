@@ -18,14 +18,6 @@ const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
 
-const listConfigurations = async function* (services, env) {
-    for (let serviceId of services) {
-
-        const { data } = await appmixerApi.getServiceConfig(serviceId);
-        yield { serviceId, data };
-    }
-};
-
 const dump = async function(serviceId, options) {
 
     const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
