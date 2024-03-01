@@ -55,10 +55,13 @@ program
         const localServices = await localSources.list(SRC_PATH);
         const stats = [];
 
+
         for (let { connectorPath, serviceIds } of localServices) {
 
             for (let service of serviceIds) {
+
                 const { isOauth } = await localSources.getAuth(service, SRC_PATH);
+
                 const { data } = await authHubApi.getServiceConfig(service, opt);
                 const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
                 const isEmpty = !data || Object.keys(data).length === 0;
@@ -68,6 +71,7 @@ program
                     await localKeys.update(service, data, opt);
                 }
 
+                if (isOauth)
                 stats.push({
                     service,
                     OAuth: isOauth ? 'X' : ' ',
