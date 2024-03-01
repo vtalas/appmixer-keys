@@ -2,3 +2,4 @@
 .env.stg
 .env.prod
 .env.qa
+./connectors/**
