@@ -38,7 +38,6 @@ function getZip(serviceId) {
     throw new Error(`Zip file not found: ${distFolder}/${zip}`);
 }
 
-
 const get = async function(service, { environment = 'QA', keysBasePath } = {}) {
 
     const configFilePath = src(service, { environment, keysBasePath });
@@ -48,6 +47,18 @@ const get = async function(service, { environment = 'QA', keysBasePath } = {}) {
     data = JSON.parse(await fs.readFileSync(configFilePath, 'utf8'));
 
     return data;
+};
+
+const getMetaData = async function(service, data, { keysBasePath } = {}) {
+    const servicePath = path.join(keysBasePath, service.replaceAll(':', '/'));
+    const metadataPath = path.join(servicePath, `metadata.json`);
+
+    let metadata = {}
+    if (fs.existsSync(metadataPath)) {
+        metadata = JSON.parse(await fs.readFileSync(metadataPath, 'utf8'));
+    }
+
+    return metadata;
 };
 
 const update = async function(service, data, { environment = 'QA', keysBasePath } = {}) {
@@ -64,4 +75,4 @@ const src = function(service, { environment = 'QA', keysBasePath } = {}) {
     return path.join(servicePath, `config.${environment}.json`);
 };
 
-module.exports = { get, update, src, getZip };
+module.exports = { get, update, src, getZip, getMetaData };

@@ -14,10 +14,10 @@ const authHubApi = require('./appmixer-api')({ token: AUTH_HUB_API_TOKEN, url: A
 const appmixerApi = require('./appmixer-api')({ token: APPMIXER_API_TOKEN, url: APPMIXER_API_URL });
 
 const localSources = require('./local-sources');
+const { getMetaData } = require('./service-keys');
 const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
-
 const dump = async function(serviceId, options) {
 
     const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
@@ -45,7 +45,7 @@ const dump = async function(serviceId, options) {
 };
 
 program
-    .command('list' )
+    .command('list')
     .option('-b, --store-backoffice', 'store configurations to local keys.')
     .description('list all service configurations and renders the results in the table.')
     .action(async (options) => {
@@ -54,7 +54,6 @@ program
 
         const localServices = await localSources.list(SRC_PATH);
         const stats = [];
-
 
         for (let { connectorPath, serviceIds } of localServices) {
 
@@ -71,13 +70,16 @@ program
                     await localKeys.update(service, data, opt);
                 }
 
+                const metadata = await getMetaData(service, data, opt);
                 if (isOauth)
-                stats.push({
-                    service,
-                    OAuth: isOauth ? 'X' : ' ',
-                    'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 40) + '...' : 'n/a',
-                    'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
-                });
+                    stats.push({
+                        service,
+                        requireVerification: metadata.requireVerification,
+                        verificationStatus: metadata.verificationStatus,
+                        OAuth: isOauth ? 'X' : ' ',
+                        'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 40) + '...' : 'n/a',
+                        'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
+                    });
             }
         }
 
