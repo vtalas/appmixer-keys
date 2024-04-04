@@ -1,4 +1,5 @@
 {
     "requireVerification": true,
-    "verificationStatus": "started"
+    "verificationStatus": "started",
+    "verificationInfo": "max 500 users, app will not be reviewed until your app has linked with at least 50 Dropbox users"
 }
