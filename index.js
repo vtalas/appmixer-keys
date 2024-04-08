@@ -36,6 +36,14 @@ const dump = async function(serviceId, options) {
     console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
     console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
 
+    const zipBundle = (await authHubApi.download(serviceId.replace(':', '.'), json));
+    if (zipBundle.status !== 200) {
+        console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
+        console.log(zipBundle.data);
+    } else {
+        console.log('Auth hub zip bundle:', chalk.green('OK'));
+    }
+
     console.log(chalk.yellow('--------------------------------'));
     console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
     console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
@@ -71,7 +79,7 @@ program
                 }
 
                 const metadata = await getMetaData(service, data, opt);
-                if (isOauth)
+                if (isOauth || true)
                     stats.push({
                         service,
                         requireVerification: metadata.requireVerification,
@@ -84,7 +92,18 @@ program
         }
 
         console.table(stats);
+
+        // stats.forEach(item => {
+        //     const line = Object.keys(item).reduce((res, key) => {
+        //         res += `${item[key]} ;`;
+        //
+        //         return res;
+        //     }, '');
+        //     console.log(line);
+        // });
+
         console.log(chalk.greenBright('ENV'), CURRENT_ENV);
+
     });
 
 program
@@ -103,7 +122,10 @@ program
         await authHubApi.setServiceConfig(serviceId, json);
 
         // upload zip
-        await authHubApi.upload(serviceId);
+        const rs = await authHubApi.upload(serviceId);
+        const { ticket } = rs.data;
+
+        await callUploadStatus(ticket);
 
         if (options.delete) {
             console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
@@ -114,6 +136,28 @@ program
 
         await dump(serviceId);
     });
+
+const callUploadStatus = function(ticket) {
+    const maxCount = 10;
+    return new Promise((resolve) => {
+        let count = 0;
+        const intervalId = setInterval(async () => {
+            if (count < maxCount) {
+                const status = await authHubApi.uploadStatus(ticket);
+                console.log(status.data);
+                if (status.data.finished) {
+                    clearInterval(intervalId);
+                    resolve();
+
+                }
+                count++;
+            } else {
+                clearInterval(intervalId);
+                resolve();
+            }
+        }, 1000);
+    });
+};
 
 program
     .command('set-backoffice <service>')
@@ -129,7 +173,7 @@ program
         await appmixerApi.setServiceConfig(serviceId, json);
 
         console.log(chalk.bgGreen(`Service ${serviceId} updated in Backoffice`));
-
+        console.log('\n');
         await dump(serviceId);
     });
 

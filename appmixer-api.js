@@ -12,6 +12,15 @@ const getConfig = ({ url, token }) => {
         });
     };
 };
+const download = ({ url, token }) => {
+
+    return (service) => {
+        return rq({
+            url: new URL(`/components/${service}`, url).toString(),
+            token
+        });
+    };
+};
 const deleteConfig = ({ url, token }) => {
 
     return (service) => {
@@ -35,19 +44,31 @@ const setServiceConfig = ({ url, token }) => {
     };
 };
 
-const upload = ({ url, token }) => {
+const upload =  ({ url, token }) => {
 
-    return (serviceId) => {
+    return async (serviceId) => {
 
         const zipPath = getZip(serviceId);
 
-        return rq({
+        console.log('Uploading zip bundle:', zipPath);
+        return await rq({
             method: 'POST',
             headers: {
                 'Content-Type': 'application/octet-stream'
             },
-            url: new URL(`/components`, url).toString(),
+            url: new URL(`/components?replaceAll=true`, url).toString(),
             data: fs.createReadStream(zipPath),
+            token
+        });
+    };
+};
+
+const uploadStatus =  ({ url, token }) => {
+
+    return async (ticket) => {
+
+        return await rq({
+            url: new URL(`/components/uploader/${ticket}`, url).toString(),
             token
         });
     };
@@ -63,7 +84,9 @@ module.exports = ({ url, token }) => {
         getServiceConfig: getConfig({ url, token }),
         deleteServiceConfig: deleteConfig({ url, token }),
         upload: upload({ url, token }),
-        getZip
+        download: download({ url, token }),
+        uploadStatus: uploadStatus({ url, token }),
+        getZip,
     };
 };
 
