@@ -17,7 +17,10 @@ const download = ({ url, token }) => {
     return (service) => {
         return rq({
             url: new URL(`/components/${service}`, url).toString(),
-            token
+            token,
+            headers: {
+                'Content-Type': 'application/octet-stream'
+            }
         });
     };
 };
