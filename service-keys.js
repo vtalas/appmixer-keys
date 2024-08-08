@@ -23,13 +23,13 @@ function getZip(serviceId) {
 
     const zip = `${serviceId.replaceAll(':', '.')}.zip`;
 
-    let distFolder = `../appmixer-components/dist`;
+    let distFolder = `../appmixer-connectors/dist`;
 
     if (fs.existsSync(`${distFolder}/${zip}`)) {
         return `${distFolder}/${zip}`;
     }
 
-    distFolder = `../appmixer-connectors/dist`;
+    distFolder = `../appmixer-components/dist`;
 
     if (fs.existsSync(`${distFolder}/${zip}`)) {
         return `${distFolder}/${zip}`;
