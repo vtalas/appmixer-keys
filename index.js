@@ -79,7 +79,7 @@ program
                 }
 
                 const metadata = await getMetaData(service, data, opt);
-                if (isOauth || true)
+                if (isOauth)
                     stats.push({
                         service,
                         requireVerification: metadata.requireVerification,
