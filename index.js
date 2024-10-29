@@ -18,6 +18,7 @@ const { getMetaData } = require('./service-keys');
 const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
+const SKIP_LIST = (process.env.IGNORE || '').split(',');
 const dump = async function(serviceId, options) {
 
     const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
@@ -36,7 +37,7 @@ const dump = async function(serviceId, options) {
     console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
     console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
 
-    const zipBundle = (await authHubApi.download(serviceId.replace(':', '.'), json));
+    const zipBundle = (await authHubApi.download(serviceId.replaceAll(':', '.'), json));
     if (zipBundle.status !== 200) {
         console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
         console.log(zipBundle.data);
@@ -62,36 +63,46 @@ program
 
         const localServices = await localSources.list(SRC_PATH);
         const stats = [];
+        const statsSkippedConnectors = [];
 
         for (let { connectorPath, serviceIds } of localServices) {
 
             for (let service of serviceIds) {
-
                 const { isOauth } = await localSources.getAuth(service, SRC_PATH);
 
-                const { data } = await authHubApi.getServiceConfig(service, opt);
-                const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
-                const isEmpty = !data || Object.keys(data).length === 0;
-                const isBackofficeEmpty = !backoffice || backoffice && Object.keys(backoffice).length === 0;
+                if (isOauth) {
 
-                if (options.storeBackoffice) {
-                    await localKeys.update(service, data, opt);
-                }
+                    const { data } = await authHubApi.getServiceConfig(service, opt);
+                    const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
+                    const isEmpty = !data || Object.keys(data).length === 0;
+                    const isBackofficeEmpty = !backoffice || backoffice && Object.keys(backoffice).length === 0;
 
-                const metadata = await getMetaData(service, data, opt);
-                if (isOauth)
-                    stats.push({
+                    if (options.storeBackoffice) {
+                        await localKeys.update(service, data, opt);
+                    }
+
+                    // const metadata = await getMetaData(service, data, opt);
+                    const statsObject = {
                         service,
-                        requireVerification: metadata.requireVerification,
-                        verificationStatus: metadata.verificationStatus,
+                        // requireVerification: metadata.requireVerification,
+                        // verificationStatus: metadata.verificationStatus,
                         OAuth: isOauth ? 'X' : ' ',
                         'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 40) + '...' : 'n/a',
                         'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
-                    });
+                    };
+                    if (SKIP_LIST.includes(service.replaceAll(':', '.'))) {
+                        statsSkippedConnectors.push(statsObject);
+                    } else {
+                        stats.push(statsObject);
+                    }
+                }
+
             }
         }
 
         console.table(stats);
+        console.table(statsSkippedConnectors);
+        console.log(stats.map(item => item.service.replace(':', '.')));
 
         // stats.forEach(item => {
         //     const line = Object.keys(item).reduce((res, key) => {
@@ -137,13 +148,37 @@ program
         await dump(serviceId);
     });
 
+program
+    .command('upload <service>')
+    .description('Upload bundle to Appmixer instance with replace = true .')
+    .action(async (serviceId, options) => {
+
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        }
+
+        // upload zip
+        const rs = await appmixerApi.upload(serviceId);
+        const { ticket } = rs.data;
+
+        await callUploadStatus(ticket);
+
+        if (options.delete) {
+            console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
+            await appmixerApi.deleteServiceConfig(serviceId);
+        }
+
+        console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
+    });
+
 const callUploadStatus = function(ticket) {
-    const maxCount = 10;
+    const maxCount = 20;
     return new Promise((resolve) => {
         let count = 0;
         const intervalId = setInterval(async () => {
             if (count < maxCount) {
                 const status = await authHubApi.uploadStatus(ticket);
+                // const status = await appmixerApi.uploadStatus(ticket);
                 console.log(status.data);
                 if (status.data.finished) {
                     clearInterval(intervalId);
