@@ -136,7 +136,7 @@ program
         const rs = await authHubApi.upload(serviceId);
         const { ticket } = rs.data;
 
-        await callUploadStatus(ticket);
+        await callUploadStatus(ticket, authHubApi);
 
         if (options.delete) {
             console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
@@ -161,7 +161,7 @@ program
         const rs = await appmixerApi.upload(serviceId);
         const { ticket } = rs.data;
 
-        await callUploadStatus(ticket);
+        await callUploadStatus(ticket, appmixerApi);
 
         if (options.delete) {
             console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
@@ -171,13 +171,13 @@ program
         console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
     });
 
-const callUploadStatus = function(ticket) {
+const callUploadStatus = function(ticket, api) {
     const maxCount = 20;
     return new Promise((resolve) => {
         let count = 0;
         const intervalId = setInterval(async () => {
             if (count < maxCount) {
-                const status = await authHubApi.uploadStatus(ticket);
+                const status = await api.uploadStatus(ticket);
                 // const status = await appmixerApi.uploadStatus(ticket);
                 console.log(status.data);
                 if (status.data.finished) {
