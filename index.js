@@ -102,16 +102,9 @@ program
 
         console.table(stats);
         console.table(statsSkippedConnectors);
-        console.log(stats.map(item => item.service.replace(':', '.')));
 
-        // stats.forEach(item => {
-        //     const line = Object.keys(item).reduce((res, key) => {
-        //         res += `${item[key]} ;`;
-        //
-        //         return res;
-        //     }, '');
-        //     console.log(line);
-        // });
+        console.log(`OAuth connectors with Auth Hub config (${CURRENT_ENV}):`);
+        console.log(stats.filter(item => item['Auth Hub'] !== 'n/a').map(item => item.service.replace(':', '.')));
 
         console.log(chalk.greenBright('ENV'), CURRENT_ENV);
 
