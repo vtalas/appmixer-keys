@@ -21,37 +21,48 @@ const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixe
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
 const dump = async function(serviceId, options) {
 
-    const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
-    if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
-        throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        }
+
+        const json = await localKeys.get(serviceId, opt);
+
+        console.log(chalk.yellow(serviceId));
+        console.log(chalk.yellow('ENV'), CURRENT_ENV);
+        console.log(chalk.yellow('Local Keys'), localKeys.src(serviceId, opt));
+        console.log(json);
+
+        console.log(chalk.yellow('--------------------------------'));
+        console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
+        console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
+
+        console.log(chalk.yellow('--------------------------------'));
+        try {
+            console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
+
+        } catch (e) {
+            console.log(chalk.redBright('Error getting zip bundle:'), e.message);
+        }
+
+        console.log(chalk.yellow('--------------------------------'));
+        console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
+        console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
+
+        try {
+            const zipBundle = (await authHubApi.download(serviceId.replaceAll(':', '.'), json));
+            if (zipBundle.status !== 200) {
+                console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
+                console.log(zipBundle.data);
+            } else {
+                console.log('Auth hub zip bundle:', chalk.green('OK'));
+            }
+        } catch (e) {
+            console.log(chalk.redBright('Error getting Auth Hub zip bundle:'), e.message);
+        }
+
     }
-
-    const json = await localKeys.get(serviceId, opt);
-
-    console.log(chalk.yellow(serviceId));
-    console.log(chalk.yellow('ENV'), CURRENT_ENV);
-    console.log(chalk.yellow('Local Keys'), localKeys.src(serviceId, opt));
-    console.log(json);
-
-    console.log(chalk.yellow('--------------------------------'));
-    console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
-    console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
-
-    const zipBundle = (await authHubApi.download(serviceId.replaceAll(':', '.'), json));
-    if (zipBundle.status !== 200) {
-        console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
-        console.log(zipBundle.data);
-    } else {
-        console.log('Auth hub zip bundle:', chalk.green('OK'));
-    }
-
-    console.log(chalk.yellow('--------------------------------'));
-    console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
-    console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
-
-    console.log(chalk.yellow('--------------------------------'));
-    console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
-};
+;
 
 program
     .command('list')
@@ -138,6 +149,24 @@ program
 
         console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
 
+        await dump(serviceId);
+    });
+
+program
+    .command('set-config <service>')
+    .description('Set the configuration of a service in Auth Hub.')
+    .action(async (serviceId, options) => {
+
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
+        }
+
+        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+
+        // set config
+        await appmixerApi.setServiceConfig(serviceId, json);
+
+        // upload zip
         await dump(serviceId);
     });
 
