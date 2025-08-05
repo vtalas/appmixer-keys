@@ -66,6 +66,18 @@ const upload =  ({ url, token }) => {
     };
 };
 
+const getStoreRecords =  ({ url, token }) => {
+
+    return async (storageId) => {
+
+        return await rq({
+            method: 'GET',
+            url: new URL(`/store?storeId=${storageId}`, url).toString(),
+            token
+        });
+    };
+};
+
 const uploadStatus =  ({ url, token }) => {
 
     return async (ticket) => {
@@ -88,6 +100,7 @@ module.exports = ({ url, token }) => {
         deleteServiceConfig: deleteConfig({ url, token }),
         upload: upload({ url, token }),
         download: download({ url, token }),
+        getStoreRecords: getStoreRecords({ url, token }),
         uploadStatus: uploadStatus({ url, token }),
         getZip,
     };

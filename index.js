@@ -1,5 +1,6 @@
 const { program } = require('commander');
 const localKeys = require('./service-keys');
+const status = require('./status');
 const chalk = require('chalk');
 
 require('dotenv-flow').config();
@@ -185,10 +186,38 @@ program
 
         await callUploadStatus(ticket, appmixerApi);
 
-        if (options.delete) {
-            console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
-            await appmixerApi.deleteServiceConfig(serviceId);
+        console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
+    });
+
+program
+    .command('status <storageId>')
+    .description('Upload bundle to Appmixer instance with replace = true .')
+    .action(async (serviceId, options) => {
+
+        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
         }
+
+        // upload zip
+        const rs = await appmixerApi.getStoreRecords(serviceId);
+
+        const tickets = status.status(rs.data);
+
+        console.log(chalk.yellow('In Progress tickets:'));
+        tickets.forEach(ticket => {
+
+            if (!ticket.status['Done']) {
+                console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
+            }
+        })
+
+        console.log(chalk.green('DONE tickets:'));
+        tickets.forEach(ticket => {
+
+            if (ticket.status['Done'] && ticket.status['Total Effort'] > 0) {
+                console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
+            }
+        })
 
         console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
     });
