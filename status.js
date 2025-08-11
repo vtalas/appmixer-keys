@@ -32,6 +32,7 @@ module.exports = {
     }
 };
 
+/*
 {return `${$variable.data.title} /${$variable.data.status}/ : ${JSON.stringify($variable.status)}\n`;}
 
 {return $variable.sort((a,b) => {(a.status['Total Effort'] || 0) > (b.status['Total Effort'] || 0) ? -1 : 1;})}
@@ -52,3 +53,4 @@ module.exports = {
     return $variable;
 }
 
+*/
