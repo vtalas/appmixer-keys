@@ -51,7 +51,6 @@ const rq = async function({
                               token
                           }) {
 
-
     console.log(chalk.gray(method.toUpperCase(), url));
     return axios({
         url,
@@ -64,7 +63,7 @@ const rq = async function({
     }).then(response => {
         return response;
     }).catch(err => {
-        console.log('err');
+        console.log(err.response.status);
         console.log('ERR RESPONSE DATA', err?.response?.data);
         process.exit(1);
     });
