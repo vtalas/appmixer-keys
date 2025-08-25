@@ -3,6 +3,7 @@ const { resolve } = require('path');
 const { readdir } = require('fs').promises;
 const fs = require('fs/promises');
 const chalk = require('chalk');
+const spawn = require('child_process').spawn;
 
 async function getFilesFiltered(dir, filter) {
     const dirents = await readdir(dir, { withFileTypes: true });
@@ -69,7 +70,54 @@ const rq = async function({
     });
 };
 
+
+const executeCommand = async function(command, cwd) {
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        // console.log(command[0], command.slice(1));
+        const child = spawn(command[0], command.slice(1), {
+            cwd,
+            stdio: 'pipe',
+            shell: process.platform === 'win32',
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout?.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', (exitCode) => {
+            const duration = Date.now() - startTime;
+            resolve({
+                exitCode,
+                stdout,
+                stderr,
+                duration,
+            });
+        });
+
+        child.on('error', (error) => {
+            const duration = Date.now() - startTime;
+            resolve({
+                exitCode: -1,
+                stdout,
+                stderr: stderr + '\n' + error.message,
+                duration,
+            });
+        });
+    });
+};
+
+
+
 module.exports = {
+    executeCommand,
     rq, getFilesFiltered,
     getAuthServicesForConnector
 };

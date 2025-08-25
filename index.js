@@ -16,9 +16,11 @@ const appmixerApi = require('./appmixer-api')({ token: APPMIXER_API_TOKEN, url: 
 
 const localSources = require('./local-sources');
 const { getMetaData } = require('./service-keys');
+const { executeCommand } = require('./utils');
 const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
+const DIST_PATH = '../appmixer-connectors/dist';
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
 const dump = async function(serviceId, options) {
 
@@ -132,6 +134,9 @@ program
             throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
         }
 
+        const pack = await executeCommand(['appmixer', 'pack', `../src/${serviceId.replaceAll(':', '/')}`], DIST_PATH);
+        console.log(pack.stdout);
+
         const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
 
         // set config
@@ -191,7 +196,6 @@ program
 
 program
     .command('status <storageId>')
-    .description('Upload bundle to Appmixer instance with replace = true .')
     .action(async (serviceId, options) => {
 
         if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
