@@ -142,11 +142,15 @@ program
         // set config
         await authHubApi.setServiceConfig(serviceId, json);
 
-        // upload zip
-        const rs = await authHubApi.upload(serviceId);
+        // upload zip to authub
+        let rs = await authHubApi.upload(serviceId);
         const { ticket } = rs.data;
 
         await callUploadStatus(ticket, authHubApi);
+
+        // upload zip to authub
+        rs = await appmixerApi.upload(serviceId);
+        await callUploadStatus(rs.data.ticket, appmixerApi);
 
         if (options.delete) {
             console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
