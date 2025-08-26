@@ -72,7 +72,7 @@ const rq = async function({
 
 
 const executeCommand = async function(command, cwd) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const startTime = Date.now();
         // console.log(command[0], command.slice(1));
         const child = spawn(command[0], command.slice(1), {
@@ -104,7 +104,7 @@ const executeCommand = async function(command, cwd) {
 
         child.on('error', (error) => {
             const duration = Date.now() - startTime;
-            resolve({
+            reject({
                 exitCode: -1,
                 stdout,
                 stderr: stderr + '\n' + error.message,

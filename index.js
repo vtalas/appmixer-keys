@@ -20,7 +20,7 @@ const { executeCommand } = require('./utils');
 const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
-const DIST_PATH = '../appmixer-connectors/dist';
+const DIST_PATH = process.env.DIST_PATH || '../appmixer-connectors/dist';
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
 const dump = async function(serviceId, options) {
 
