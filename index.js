@@ -212,20 +212,21 @@ program
         const tickets = status.status(rs.data);
 
         console.log(chalk.yellow('In Progress tickets:'));
-        tickets.forEach(ticket => {
+        const inProgress = tickets.filter(ticket => !ticket.status['Done']);
 
-            if (!ticket.status['Done']) {
-                console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
-            }
-        })
+
+        inProgress.forEach(ticket => {
+            console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
+        });
+        status.stats(inProgress);
 
         console.log(chalk.green('DONE tickets:'));
-        tickets.forEach(ticket => {
-
-            if (ticket.status['Done'] && ticket.status['Total Effort'] > 0) {
-                console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
-            }
-        })
+        const done = tickets.filter(ticket => ticket.status['Done'] && ticket.status['Total Effort'] > 0);
+        console.log(done.length, 'done tickets');
+        console.log(inProgress.length, 'in progress tickets');
+        done.forEach(ticket => {
+            // console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
+        });
 
         console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
     });

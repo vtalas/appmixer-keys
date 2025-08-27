@@ -1,11 +1,11 @@
 module.exports = {
-    status(data = []) {
+    status(snapshots = []) {
 
         const tickets = {};
 
-        data.forEach(item => {
-
-            item.value.forEach(ticket => {
+        snapshots.forEach(snapshot => {
+            // const timestamp = snapshot.key
+            snapshot.value.forEach(ticket => {
 
                 if (!tickets[ticket.id]) {
                     tickets[ticket.id] = { data: ticket, status: {} };
@@ -26,9 +26,35 @@ module.exports = {
 
         return Object.keys(tickets).map(id => {
             return tickets[id];
-        }).sort((a, b) => {
-            return (a.status['Total Effort'] || 0) > (b.status['Total Effort'] || 0) ? -1 : 1;
-        });
+        })
+        // .sort((a, b) => {
+        //     return (a.status['Total Effort'] || 0) > (b.status['Total Effort'] || 0) ? -1 : 1;
+        // });
+    },
+    stats(ticketsWithStatus = []) {
+
+        const totalStatusesCount = ticketsWithStatus.reduce((res, ticket) => {
+            Object.keys(ticket.status).forEach(statusKey => {
+                res[statusKey] = res[statusKey] || 0;
+                res[statusKey] += ticket.status[statusKey];
+                res[statusKey + '_COUNT'] = res[statusKey + '_COUNT'] || 0;
+                res[statusKey + '_COUNT']++;
+            });
+            return res;
+        }, {});
+
+        console.log(totalStatusesCount);
+        const x = Object.keys(totalStatusesCount).reduce((res, ticketStatus) => {
+            if (!ticketStatus.includes('COUNT')) {
+                const number = totalStatusesCount[ticketStatus] / totalStatusesCount[ticketStatus + '_COUNT'];
+                res[ticketStatus + '_AVERAGE'] = parseFloat(number.toFixed(2));
+            } else {
+                res[ticketStatus] = totalStatusesCount[ticketStatus];
+            }
+
+            return res;
+        }, {});
+        console.log(x);
     }
 };
 
