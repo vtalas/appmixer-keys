@@ -1,35 +1,39 @@
+function addStatuses($variable) {
+
+    const tickets = {};
+
+    $variable.forEach(snapshot => {
+
+        // const timestamp = snapshot.key
+        snapshot.value.forEach(ticket => {
+
+            if (!tickets[ticket.id]) {
+                tickets[ticket.id] = { data: ticket, status: {} };
+            }
+
+            const ticketStatus = ticket.status;
+            tickets[ticket.id].status[ticketStatus] = tickets[ticket.id].status[ticketStatus] || 0;
+            tickets[ticket.id].status[ticketStatus]++;
+
+            if (ticketStatus !== 'Done') {
+                const totalEffort = 'Total Effort';
+                tickets[ticket.id].status[totalEffort] = tickets[ticket.id].status[totalEffort] || 0;
+                tickets[ticket.id].status[totalEffort]++;
+            }
+        });
+
+    });
+
+    return Object.keys(tickets).map(id => {
+        return tickets[id];
+    })
+
+}
+
 module.exports = {
     status(snapshots = []) {
 
-        const tickets = {};
-
-        snapshots.forEach(snapshot => {
-            // const timestamp = snapshot.key
-            snapshot.value.forEach(ticket => {
-
-                if (!tickets[ticket.id]) {
-                    tickets[ticket.id] = { data: ticket, status: {} };
-                }
-
-                const ticketStatus = ticket.status;
-                tickets[ticket.id].status[ticketStatus] = tickets[ticket.id].status[ticketStatus] || 0;
-                tickets[ticket.id].status[ticketStatus]++;
-
-                if (ticketStatus !== 'Done') {
-                    const totalEffort = 'Total Effort';
-                    tickets[ticket.id].status[totalEffort] = tickets[ticket.id].status[totalEffort] || 0;
-                    tickets[ticket.id].status[totalEffort]++;
-                }
-            });
-
-        });
-
-        return Object.keys(tickets).map(id => {
-            return tickets[id];
-        })
-        // .sort((a, b) => {
-        //     return (a.status['Total Effort'] || 0) > (b.status['Total Effort'] || 0) ? -1 : 1;
-        // });
+        return addStatuses(snapshots);
     },
     stats(ticketsWithStatus = []) {
 
