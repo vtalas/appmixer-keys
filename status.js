@@ -1,4 +1,4 @@
-function addStatuses($variable) {
+function ticketWithStatuses($variable) {
 
     const tickets = {};
 
@@ -24,7 +24,7 @@ function addStatuses($variable) {
     });
 
     return Object.keys(tickets).map(id => tickets[id])
-        // .filter(ticket => !ticket.status['Done']);
+        .filter(ticket => !ticket.status['Done']);
 }
 
 function stats($variable) {
@@ -53,7 +53,7 @@ function stats($variable) {
 module.exports = {
     status(snapshots = []) {
 
-        return addStatuses(snapshots);
+        return ticketWithStatuses(snapshots);
     },
     stats(ticketsWithStatus = []) {
 
@@ -80,6 +80,24 @@ module.exports = {
     $variable[ticketStatus] = $variable[ticketStatus] || 0;
     $variable[ticketStatus]++;
     return $variable;
+}
+
+*/
+
+/*
+
+{
+    "stats": {
+    "TOTAL": 34,
+        "Review_AVERAGE": 5.24,
+        "Review_COUNT": 21,
+        "Total Effort_AVERAGE": 17.88,
+        "Total Effort_COUNT": 34,
+        "Testing_AVERAGE": 16.17,
+        "Testing_COUNT": 18,
+        "In Progress_AVERAGE": 8.28,
+        "In Progress_COUNT": 25
+}
 }
 
 */
