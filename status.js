@@ -4,7 +4,6 @@ function addStatuses($variable) {
 
     $variable.forEach(snapshot => {
 
-        // const timestamp = snapshot.key
         snapshot.value.forEach(ticket => {
 
             if (!tickets[ticket.id]) {
@@ -24,10 +23,31 @@ function addStatuses($variable) {
 
     });
 
-    return Object.keys(tickets).map(id => {
-        return tickets[id];
-    })
+    return Object.keys(tickets).map(id => tickets[id])
+        // .filter(ticket => !ticket.status['Done']);
+}
 
+function stats($variable) {
+    const totalStatusesCount = $variable.reduce((res, ticket) => {
+        Object.keys(ticket.status).forEach(statusKey => {
+            res[statusKey] = res[statusKey] || 0;
+            res[statusKey] += ticket.status[statusKey];
+            res[statusKey + '_COUNT'] = res[statusKey + '_COUNT'] || 0;
+            res[statusKey + '_COUNT']++;
+        });
+        return res;
+    }, {});
+
+    return Object.keys(totalStatusesCount).reduce((res, ticketStatus) => {
+        if (!ticketStatus.includes('COUNT')) {
+            const number = totalStatusesCount[ticketStatus] / totalStatusesCount[ticketStatus + '_COUNT'];
+            res[ticketStatus + '_AVERAGE'] = parseFloat(number.toFixed(2));
+        } else {
+            res[ticketStatus] = totalStatusesCount[ticketStatus];
+        }
+
+        return res;
+    }, { TOTAL: $variable.length });
 }
 
 module.exports = {
@@ -37,28 +57,7 @@ module.exports = {
     },
     stats(ticketsWithStatus = []) {
 
-        const totalStatusesCount = ticketsWithStatus.reduce((res, ticket) => {
-            Object.keys(ticket.status).forEach(statusKey => {
-                res[statusKey] = res[statusKey] || 0;
-                res[statusKey] += ticket.status[statusKey];
-                res[statusKey + '_COUNT'] = res[statusKey + '_COUNT'] || 0;
-                res[statusKey + '_COUNT']++;
-            });
-            return res;
-        }, {});
-
-        console.log(totalStatusesCount);
-        const x = Object.keys(totalStatusesCount).reduce((res, ticketStatus) => {
-            if (!ticketStatus.includes('COUNT')) {
-                const number = totalStatusesCount[ticketStatus] / totalStatusesCount[ticketStatus + '_COUNT'];
-                res[ticketStatus + '_AVERAGE'] = parseFloat(number.toFixed(2));
-            } else {
-                res[ticketStatus] = totalStatusesCount[ticketStatus];
-            }
-
-            return res;
-        }, {});
-        console.log(x);
+        return stats(ticketsWithStatus);
     }
 };
 
