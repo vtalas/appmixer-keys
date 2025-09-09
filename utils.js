@@ -84,6 +84,7 @@ const executeCommand = async function(command, cwd) {
         let stdout = '';
         let stderr = '';
 
+        console.log(`Executing command: ${command.join(' ')} in directory: ${cwd}`);
         child.stdout?.on('data', (data) => {
             stdout += data.toString();
         });
