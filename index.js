@@ -37,18 +37,6 @@ const dump = async function(serviceId, options) {
         console.log(json);
 
         console.log(chalk.yellow('--------------------------------'));
-        console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
-        console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
-
-        console.log(chalk.yellow('--------------------------------'));
-        try {
-            console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
-
-        } catch (e) {
-            console.log(chalk.redBright('Error getting zip bundle:'), e.message);
-        }
-
-        console.log(chalk.yellow('--------------------------------'));
         console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
         console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
 
@@ -62,6 +50,18 @@ const dump = async function(serviceId, options) {
             }
         } catch (e) {
             console.log(chalk.redBright('Error getting Auth Hub zip bundle:'), e.message);
+        }
+
+        console.log(chalk.yellow('--------------------------------'));
+        console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
+        console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
+
+        console.log(chalk.yellow('--------------------------------'));
+        try {
+            console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
+
+        } catch (e) {
+            console.log(chalk.redBright('Error getting zip bundle:'), e.message);
         }
 
     }
