@@ -38,26 +38,45 @@ function ticketWithStatuses($variable) {
 
 
 function stats($variable) {
-    const totalStatusesCount = $variable.reduce((res, ticket) => {
-        Object.keys(ticket.status).forEach(statusKey => {
-            res[statusKey] = res[statusKey] || 0;
-            res[statusKey] += ticket.status[statusKey];
-            res[statusKey + '_COUNT'] = res[statusKey + '_COUNT'] || 0;
-            res[statusKey + '_COUNT']++;
-        });
-        return res;
-    }, {});
+    const totalStatusesCount = {};
+    const statusValues = {};
 
-    return Object.keys(totalStatusesCount).reduce((res, ticketStatus) => {
-        if (!ticketStatus.includes('COUNT')) {
-            const number = totalStatusesCount[ticketStatus] / totalStatusesCount[ticketStatus + '_COUNT'];
-            res[ticketStatus + '_AVERAGE'] = parseFloat(number.toFixed(2));
-        } else {
-            res[ticketStatus] = totalStatusesCount[ticketStatus];
+    function calculateMedian(arr) {
+        if (!arr.length) return null;
+        const sorted = arr.slice().sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        if (sorted.length % 2 === 0) {
+            return (sorted[mid - 1] + sorted[mid]) / 2;
         }
+        return sorted[mid];
+    }
 
-        return res;
-    }, { TOTAL: $variable.length });
+
+    $variable.forEach(ticket => {
+        Object.keys(ticket.status).forEach(statusKey => {
+            totalStatusesCount[statusKey] = totalStatusesCount[statusKey] || 0;
+            totalStatusesCount[statusKey] += ticket.status[statusKey];
+            totalStatusesCount[statusKey + '_COUNT'] = totalStatusesCount[statusKey + '_COUNT'] || 0;
+            totalStatusesCount[statusKey + '_COUNT']++;
+
+            statusValues[statusKey] = statusValues[statusKey] || [];
+            statusValues[statusKey].push(ticket.status[statusKey]);
+        });
+    });
+
+    const result = { TOTAL: $variable.length };
+    Object.keys(totalStatusesCount).forEach(ticketStatus => {
+        if (!ticketStatus.includes('COUNT')) {
+            const count = totalStatusesCount[ticketStatus + '_COUNT'];
+            const avg = totalStatusesCount[ticketStatus] / count;
+            result[ticketStatus + '_AVERAGE'] = parseFloat(avg.toFixed(2));
+            result[ticketStatus + '_MED'] = calculateMedian(statusValues[ticketStatus]);
+        } else {
+            result[ticketStatus] = totalStatusesCount[ticketStatus];
+        }
+    });
+
+    return result;
 }
 
 module.exports = {
