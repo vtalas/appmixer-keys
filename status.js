@@ -1,31 +1,44 @@
 function ticketWithStatuses($variable) {
 
     const tickets = {};
+    const doneTickets = {};
+
+    const watchedTicketsHash = ($variable[$variable.length - 1]).value.reduce((res, item) => {
+        res[item.id] = item.title;
+        return res;
+    }, {});
 
     $variable.forEach(snapshot => {
-
         snapshot.value.forEach(ticket => {
 
-            if (!tickets[ticket.id]) {
-                tickets[ticket.id] = { data: ticket, status: {} };
+            if (watchedTicketsHash[ticket.id]) {
+
+                if (!tickets[ticket.id]) {
+                    tickets[ticket.id] = { data: ticket, status: {} };
+                }
+
+                const ticketStatus = ticket.status;
+                tickets[ticket.id].status[ticketStatus] = tickets[ticket.id].status[ticketStatus] || 0;
+                tickets[ticket.id].status[ticketStatus]++;
+
+                if (ticketStatus !== 'Done' && ticketStatus !== 'Closed' && !doneTickets[ticket.id]) {
+                    const totalEffort = 'Total Effort';
+                    tickets[ticket.id].status[totalEffort] = tickets[ticket.id].status[totalEffort] || 0;
+                    tickets[ticket.id].status[totalEffort]++;
+                } else {
+                    doneTickets[ticket.id] = true;
+                    delete tickets[ticket.id];
+                }
+            } else {
+                console.log('Ignoring ticket', ticket.id, ticket.title);
             }
 
-            const ticketStatus = ticket.status;
-            tickets[ticket.id].status[ticketStatus] = tickets[ticket.id].status[ticketStatus] || 0;
-            tickets[ticket.id].status[ticketStatus]++;
-
-            if (ticketStatus !== 'Done') {
-                const totalEffort = 'Total Effort';
-                tickets[ticket.id].status[totalEffort] = tickets[ticket.id].status[totalEffort] || 0;
-                tickets[ticket.id].status[totalEffort]++;
-            }
         });
-
     });
 
     return Object.keys(tickets).map(id => tickets[id])
-        .filter(ticket => !ticket.status['Done']);
 }
+
 
 function stats($variable) {
     const totalStatusesCount = $variable.reduce((res, ticket) => {

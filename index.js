@@ -215,7 +215,7 @@ program
         const inProgress = tickets.filter(ticket => !ticket.status['Done']);
 
         inProgress.forEach(ticket => {
-            console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
+            console.log(ticket.data.id, ticket.data.title, `(${ticket.data.status})`, ticket.status);
         });
         status.stats(inProgress);
 
