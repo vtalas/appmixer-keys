@@ -29,14 +29,11 @@ function ticketWithStatuses($variable) {
                     doneTickets[ticket.id] = true;
                     delete tickets[ticket.id];
                 }
-            } else {
-                console.log('Ignoring ticket', ticket.id, ticket.title);
             }
-
         });
     });
 
-    return Object.keys(tickets).map(id => tickets[id])
+    return Object.keys(tickets).map(id => tickets[id]);
 }
 
 

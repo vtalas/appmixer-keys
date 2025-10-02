@@ -215,19 +215,15 @@ program
         const inProgress = tickets.filter(ticket => !ticket.status['Done']);
 
         inProgress.forEach(ticket => {
-            console.log(ticket.data.id, ticket.data.title, `(${ticket.data.status})`, ticket.status);
+            console.log( ticket.data.title, `(${ticket.data.status})`, ticket.status);
         });
-        status.stats(inProgress);
+        const stats = status.stats(inProgress);
+        console.log(stats);
 
-        console.log(chalk.green('DONE tickets:'));
-        const done = tickets.filter(ticket => ticket.status['Done'] && ticket.status['Total Effort']);
-        console.log(done.length, 'done tickets');
-        console.log(inProgress.length, 'in progress tickets');
-        done.forEach(ticket => {
-            console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
-        });
+        // console.log(chalk.green('DONE tickets:'));
+        // const done = tickets.filter(ticket => ticket.status['Done'] && ticket.status['Total Effort']);
+        // console.log(done.length, 'done tickets');
 
-        console.log(chalk.bgGreenBright(`Service ${serviceId} updated in Auth Hub`));
     });
 
 const callUploadStatus = function(ticket, api) {
