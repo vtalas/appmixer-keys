@@ -64,8 +64,9 @@ const rq = async function({
     }).then(response => {
         return response;
     }).catch(err => {
-        console.log(err.response.status);
+        console.log(err?.response?.status);
         console.log('ERR RESPONSE DATA', err?.response?.data);
+        console.log(err);
         process.exit(1);
     });
 };

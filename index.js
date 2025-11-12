@@ -24,48 +24,47 @@ const DIST_PATH = process.env.DIST_PATH || '../appmixer-connectors/dist';
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
 const dump = async function(serviceId, options) {
 
-        const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
-        if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
-            throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
-        }
-
-        const json = await localKeys.get(serviceId, opt);
-
-        console.log(chalk.yellow(serviceId));
-        console.log(chalk.yellow('ENV'), CURRENT_ENV);
-        console.log(chalk.yellow('Local Keys'), localKeys.src(serviceId, opt));
-        console.log(json);
-
-        console.log(chalk.yellow('--------------------------------'));
-        console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
-        console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
-
-        try {
-            const zipBundle = (await authHubApi.download(serviceId.replaceAll(':', '.'), json));
-            if (zipBundle.status !== 200) {
-                console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
-                console.log(zipBundle.data);
-            } else {
-                console.log('Auth hub zip bundle:', chalk.green('OK'));
-            }
-        } catch (e) {
-            console.log(chalk.redBright('Error getting Auth Hub zip bundle:'), e.message);
-        }
-
-        console.log(chalk.yellow('--------------------------------'));
-        console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
-        console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
-
-        console.log(chalk.yellow('--------------------------------'));
-        try {
-            console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
-
-        } catch (e) {
-            console.log(chalk.redBright('Error getting zip bundle:'), e.message);
-        }
-
+    const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
+    if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
+        throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
     }
-;
+
+    const json = await localKeys.get(serviceId, opt);
+
+    console.log(chalk.yellow(serviceId));
+    console.log(chalk.yellow('ENV'), CURRENT_ENV);
+    console.log(chalk.yellow('Local Keys'), localKeys.src(serviceId, opt));
+    console.log(json);
+
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('Auth Hub'), AUTH_HUB_URL);
+    console.log((await authHubApi.getServiceConfig(serviceId, json)).data);
+
+    try {
+        const zipBundle = (await authHubApi.download(serviceId.replaceAll(':', '.'), json));
+        if (zipBundle.status !== 200) {
+            console.log(chalk.redBright('Auth hub zip bundle is not uploaded!'));
+            console.log(zipBundle.data);
+        } else {
+            console.log('Auth hub zip bundle:', chalk.green('OK'));
+        }
+    } catch (e) {
+        console.log(chalk.redBright('Error getting Auth Hub zip bundle:'), e.message);
+    }
+
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
+    console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
+
+    console.log(chalk.yellow('--------------------------------'));
+    try {
+        console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
+
+    } catch (e) {
+        console.log(chalk.redBright('Error getting zip bundle:'), e.message);
+    }
+
+};
 
 program
     .command('list')
@@ -87,7 +86,8 @@ program
                 if (isOauth) {
 
                     const { data } = await authHubApi.getServiceConfig(service, opt);
-                    const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
+                    // const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
+                    const backoffice = null;
                     const isEmpty = !data || Object.keys(data).length === 0;
                     const isBackofficeEmpty = !backoffice || backoffice && Object.keys(backoffice).length === 0;
 
@@ -101,7 +101,7 @@ program
                         // requireVerification: metadata.requireVerification,
                         // verificationStatus: metadata.verificationStatus,
                         OAuth: isOauth ? 'X' : ' ',
-                        'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 40) + '...' : 'n/a',
+                        'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 80) + '...' : 'n/a',
                         'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
                     };
                     if (SKIP_LIST.includes(service.replaceAll(':', '.'))) {
@@ -215,7 +215,7 @@ program
         const inProgress = tickets.filter(ticket => !ticket.status['Done']);
 
         inProgress.forEach(ticket => {
-            console.log( ticket.data.title, `(${ticket.data.status})`, ticket.status);
+            console.log(ticket.data.title, `(${ticket.data.status})`, ticket.status);
         });
         const stats = status.stats(inProgress);
         console.log(stats);
