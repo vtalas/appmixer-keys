@@ -66,20 +66,19 @@ const rq = async function({
     }).catch(err => {
         console.log(err?.response?.status);
         console.log('ERR RESPONSE DATA', err?.response?.data);
-        console.log(err);
-        process.exit(1);
+        // process.exit(1);
     });
 };
 
 
 const executeCommand = async function(command, cwd) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const startTime = Date.now();
         // console.log(command[0], command.slice(1));
         const child = spawn(command[0], command.slice(1), {
             cwd,
             stdio: 'pipe',
-            shell: process.platform === 'win32',
+            shell: process.platform === 'win32'
         });
 
         let stdout = '';
@@ -106,11 +105,11 @@ const executeCommand = async function(command, cwd) {
 
         child.on('error', (error) => {
             const duration = Date.now() - startTime;
-            reject({
+            resolve({
                 exitCode: -1,
                 stdout,
                 stderr: stderr + '\n' + error.message,
-                duration,
+                duration
             });
         });
     });

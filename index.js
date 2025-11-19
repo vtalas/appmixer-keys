@@ -1,4 +1,4 @@
-const { program } = require('commander');
+const {program} = require('commander');
 const localKeys = require('./service-keys');
 const status = require('./status');
 const chalk = require('chalk');
@@ -11,20 +11,22 @@ const APPMIXER_API_TOKEN = process.env.APPMIXER_API_TOKEN;
 const APPMIXER_API_URL = process.env.APPMIXER_API_URL;
 const CURRENT_ENV = process.env.ENV_NAME;
 
-const authHubApi = require('./appmixer-api')({ token: AUTH_HUB_API_TOKEN, url: AUTH_HUB_URL });
-const appmixerApi = require('./appmixer-api')({ token: APPMIXER_API_TOKEN, url: APPMIXER_API_URL });
+
+console.log(chalk.bgGreenBright('ENV'), CURRENT_ENV);
+const authHubApi = require('./appmixer-api')({token: AUTH_HUB_API_TOKEN, url: AUTH_HUB_URL});
+const appmixerApi = require('./appmixer-api')({token: APPMIXER_API_TOKEN, url: APPMIXER_API_URL});
 
 const localSources = require('./local-sources');
-const { getMetaData } = require('./service-keys');
-const { executeCommand } = require('./utils');
+const {getMetaData} = require('./service-keys');
+const {executeCommand} = require('./utils');
 const KEYS_BASE_PATH = './connectors';
 const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
 const DIST_PATH = process.env.DIST_PATH || '../appmixer-connectors/dist';
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
-const dump = async function(serviceId, options) {
+const dump = async function (serviceId, options) {
 
-    const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
+    const opt = {environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH};
     if (!AVAILABLE_ENVS.includes(CURRENT_ENV)) {
         throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
     }
@@ -72,24 +74,35 @@ program
     .description('list all service configurations and renders the results in the table.')
     .action(async (options) => {
 
-        const opt = { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH };
+        const opt = {environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH};
 
         const localServices = await localSources.list(SRC_PATH);
         const stats = [];
         const statsSkippedConnectors = [];
 
-        for (let { connectorPath, serviceIds } of localServices) {
+        for (let {connectorPath, serviceIds} of localServices) {
 
             for (let service of serviceIds) {
-                const { isOauth } = await localSources.getAuth(service, SRC_PATH);
+                const {isOauth} = await localSources.getAuth(service, SRC_PATH);
 
                 if (isOauth) {
 
-                    const { data } = await authHubApi.getServiceConfig(service, opt);
+                    const {data} = await authHubApi.getServiceConfig(service, opt);
                     // const { data: backoffice } = await appmixerApi.getServiceConfig(service, opt);
                     const backoffice = null;
                     const isEmpty = !data || Object.keys(data).length === 0;
                     const isBackofficeEmpty = !backoffice || backoffice && Object.keys(backoffice).length === 0;
+
+                    const skipped = SKIP_LIST.includes(service.replaceAll(':', '.'));
+
+                    let zipBundleUploaded = false;
+                    if (!skipped) {
+                        try {
+                            zipBundleUploaded = !!(await authHubApi.download(service.replaceAll(':', '.')));
+                        } catch (e) {
+                            // console.log(chalk.redBright('Error getting zip bundle:'), e.message);
+                        }
+                    }
 
                     if (options.storeBackoffice) {
                         await localKeys.update(service, data, opt);
@@ -100,11 +113,12 @@ program
                         service,
                         // requireVerification: metadata.requireVerification,
                         // verificationStatus: metadata.verificationStatus,
-                        OAuth: isOauth ? 'X' : ' ',
+                        // OAuth: isOauth ? 'X' : ' ',
+                        'Package': zipBundleUploaded ? '✅' : '❌',
                         'Auth Hub': !isEmpty ? JSON.stringify(data).substring(0, 80) + '...' : 'n/a',
-                        'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a',
+                        'Backoffice': !isBackofficeEmpty ? JSON.stringify(backoffice).substring(0, 40) + '...' : 'n/a'
                     };
-                    if (SKIP_LIST.includes(service.replaceAll(':', '.'))) {
+                    if (skipped) {
                         statsSkippedConnectors.push(statsObject);
                     } else {
                         stats.push(statsObject);
@@ -135,22 +149,22 @@ program
         }
 
         const pack = await executeCommand(['appmixer', 'pack', `../src/${serviceId.replaceAll(':', '/')}`], DIST_PATH);
-        console.log(pack.stdout);
+        console.log(pack);
 
-        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+        const json = await localKeys.get(serviceId, {environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH});
 
         // set config
         await authHubApi.setServiceConfig(serviceId, json);
 
         // upload zip to authub
         let rs = await authHubApi.upload(serviceId);
-        const { ticket } = rs.data;
+        const {ticket} = rs.data;
 
         await callUploadStatus(ticket, authHubApi);
 
-        // upload zip to authub
-        rs = await appmixerApi.upload(serviceId);
-        await callUploadStatus(rs.data.ticket, appmixerApi);
+        // upload zip to appmixer instance
+        // rs = await appmixerApi.upload(serviceId);
+        // await callUploadStatus(rs.data.ticket, appmixerApi);
 
         if (options.delete) {
             console.log(chalk.yellowBright(`Deleting ${serviceId} from backoffice`));
@@ -171,7 +185,7 @@ program
             throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
         }
 
-        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+        const json = await localKeys.get(serviceId, {environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH});
 
         // set config
         await appmixerApi.setServiceConfig(serviceId, json);
@@ -191,7 +205,7 @@ program
 
         // upload zip
         const rs = await appmixerApi.upload(serviceId);
-        const { ticket } = rs.data;
+        const {ticket} = rs.data;
 
         await callUploadStatus(ticket, appmixerApi);
 
@@ -226,7 +240,7 @@ program
 
     });
 
-const callUploadStatus = function(ticket, api) {
+const callUploadStatus = function (ticket, api) {
     const maxCount = 20;
     return new Promise((resolve) => {
         let count = 0;
@@ -257,7 +271,7 @@ program
             throw new Error(`Invalid environment name (<env>). Available environments: ${AVAILABLE_ENVS.join(', ')}`);
         }
 
-        const json = await localKeys.get(serviceId, { environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH });
+        const json = await localKeys.get(serviceId, {environment: CURRENT_ENV, keysBasePath: KEYS_BASE_PATH});
 
         // set config
         await appmixerApi.setServiceConfig(serviceId, json);
