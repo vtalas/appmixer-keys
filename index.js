@@ -20,7 +20,7 @@ const localSources = require('./local-sources');
 const {getMetaData} = require('./service-keys');
 const {executeCommand} = require('./utils');
 const KEYS_BASE_PATH = './connectors';
-const AVAILABLE_ENVS = ['QA', 'PROD', 'STG'];
+const AVAILABLE_ENVS = ['QA', 'PROD', 'STG', 'CLIENT'];
 const SRC_PATH = (process.env.SRC_PATH || '../appmixer-components/src;../appmixer-connectors/src').split(';');
 const DIST_PATH = process.env.DIST_PATH || '../appmixer-connectors/dist';
 const SKIP_LIST = (process.env.IGNORE || '').split(',');
@@ -55,10 +55,6 @@ const dump = async function (serviceId, options) {
     }
 
     console.log(chalk.yellow('--------------------------------'));
-    console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
-    console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
-
-    console.log(chalk.yellow('--------------------------------'));
     try {
         console.log(chalk.yellow('zip'), appmixerApi.getZip(serviceId));
 
@@ -66,6 +62,9 @@ const dump = async function (serviceId, options) {
         console.log(chalk.redBright('Error getting zip bundle:'), e.message);
     }
 
+    console.log(chalk.yellow('--------------------------------'));
+    console.log(chalk.yellow('Backoffice config'), APPMIXER_API_URL);
+    console.log((await appmixerApi.getServiceConfig(serviceId, json)).data);
 };
 
 program
